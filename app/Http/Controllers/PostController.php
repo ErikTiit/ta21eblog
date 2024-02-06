@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Http\Requests\StorePostRequest;
 use App\Http\Requests\UpdatePostRequest;
+use App\Models\Image;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class PostController extends Controller
@@ -14,7 +16,7 @@ class PostController extends Controller
      */
     public function index()
     {
-        $posts = Post::all();
+        $posts = Post::latest()->paginate();
         return view('posts.index', compact('posts'));
     }
 
@@ -32,7 +34,16 @@ class PostController extends Controller
     public function store(StorePostRequest $request)
     {
         $post = new Post($request->validated());
+        // $post->title = $request->input('title');
+        // $post->body = $request->input('body');
+        $post->user()->associate(auth()->user());
         $post->save();
+        foreach($request->validated('images') as $file){
+            $image = new Image();
+            $image->path = Storage::url($file->store('public'));
+            $image->post()->associate($post);
+            $image->save();
+        }
         return redirect()->route('posts.index');
     }
 
@@ -41,7 +52,7 @@ class PostController extends Controller
      */
     public function show(Post $post)
     {
-        return view('posts.show', compact('post'));
+        //
     }
 
     /**
@@ -57,7 +68,10 @@ class PostController extends Controller
      */
     public function update(UpdatePostRequest $request, Post $post)
     {
+
         $post->fill($request->validated());
+        // $post->title = $request->input('title');
+        // $post->body = $request->input('body');
         $post->save();
         return redirect()->route('posts.index');
     }
